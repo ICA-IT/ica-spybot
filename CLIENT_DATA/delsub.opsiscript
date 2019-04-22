@@ -1,0 +1,49 @@
+; Copyright (c) uib gmbh (www.uib.de)
+; This sourcecode is owned by uib gmbh
+; and published under the Terms of the General Public License.
+; credits: http://www.opsi.org/en/credits/
+
+include_append "%ScriptPath%\check_inno_exitcode.opsiscript"
+
+DefVar $found$
+DefVar $UninstallProgram$
+DefVar $UninstallHelper$
+
+Set $found$     = "false"
+Set $MsiId$     = ''
+
+Message "Uninstalling " + $ProductId$ + " ..."
+
+if ($SetupType$ = "inno")
+   Set $UninstallProgram$ = $InstallDir$ + "\unins000.exe"
+   Set $UninstallHelper$ = $InstallDir$ + "\unins000.dat"
+   if (not($InstallDir$ = '')) and FileExists($UninstallProgram$) and FileExists($UninstallHelper$)
+      comment "Uninstall program found, starting uninstall"
+      Winbatch_uninstall_inno
+      sub_check_exitcode
+   else
+      comment "Uninstall program not found, skipping uninstall"   	   
+;     logError "Fatal: One or more uninstall files are missing. Should be at: " + $UninstallProgram$ + " and " + $UninstallHelper$
+;     isFatalError "Uninstall program missing"
+   endif
+endif
+; If we reach here, try to nuke the spybot folder
+if (not($InstallDir$ = '')) and (not($InstallDir$ = "not used"))
+   Files_uninstall
+endif
+
+;-----------------------------------------------------
+[Winbatch_uninstall_inno]
+;"$UninstallProgram$" /SILENT /NORESTART
+;"$UninstallProgram$" /sp- /VERYSILENT /SUPPRESSMSGBOXES /LOG="c:\opsi.org\log\ica-spybot-uninstall.log"
+; might try /FIRSTPHASEWND=""
+"%ScriptPath%\spybot-un-install.exe" "$UninstallProgram$ /sp- /VERYSILENT /SUPPRESSMSGBOXES /LOG=c:\opsi.org\log\ica-spybot-uninstall.log"
+; NOTE: uninstall program will initiate a re-boot at this point!!!
+
+;-----------------------------------------------------
+
+[Files_uninstall]
+del -sf "$InstallDir$\"
+; Note: may want to delete C:\ProgramData\Spybot – Search & Destroy
+del -sf "C:\ProgramData\Spybot – Search & Destroy\"  
+;-----------------------------------------------------

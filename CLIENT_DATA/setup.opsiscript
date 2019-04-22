@@ -1,0 +1,202 @@
+; ----------------------------------------------------------------
+; Copyright (c) uib gmbh (www.uib.de)
+; This sourcecode is owned by uib
+; and published under the Terms of the General Public License.
+; credits: http://www.opsi.org/en/credits/
+; ----------------------------------------------------------------
+
+;****************************************
+; SETUPTYPE      inno
+;****************************************
+; PRODUCTID      spybot--search-destroy
+; SETUPFILE      spybotsd-2.6.46.exe
+;****************************************
+; LICENSE        false     
+; PRODUCTDESC    Spybot - Search & Destroy 2.6.46
+
+; PRODUCTNAME    Spybot - Search & Destroy
+; PRODUCTSIZE    296 MB
+; PRODUCTVER     2.6.46
+;****************************************
+; SETUPSCRIPT    setup.opsiscript
+; UNINSSCRIPT    uninstall.opsiscript
+;****************************************
+; MSIID          
+; USE-MST        
+; INSTALLDIR     %ProgramFiles32Dir%\Spybot - Search & Destroy 2
+;****************************************
+; TIMESTAMP      2/12/2018 23:08:57
+;****************************************
+
+[Actions]
+requiredWinstVersion >= "4.11.4.3"
+ScriptErrorMessages = false
+
+DefVar $SetupType$
+DefVar $ProductId$ 
+DefVar $Setupfile$ 
+DefVar $InstallDir$
+DefVar $MinimumSpace$
+DefVar $ExitCode$
+DefVar $ErrorMsg$
+DefVar $LicenseRequired$
+DefVar $LicenseKey$
+DefVar $LicensePool$
+DefVar $MsiId$
+DefVar $NsisInstallBatch$
+DefVar $LogDir$
+DefVar $ProductName2$
+DefVar $WinVer$
+DefVar $WinSysType$
+DefVar $WinTypeExt$
+DefVar $InstallDir2$
+DefVar $SetupDotIni$
+DefVar $SetupDotIni2$
+Set $WinVer$ = GetMsVersionInfo
+Set $WinSysType$ = GetSystemType
+
+Set $LogDir$ = "%opsiLogDir%"
+
+include_append "%ScriptPath%\check_inno_exitcode.opsiscript"
+
+; ----------------------------------------------------------------
+Set $SetupType$       = "inno"
+; ----------------------------------------------------------------
+
+; $ProductId$ is the name of the product in opsi, only lower letters, no umlauts, no white spaces, use '-' as a seperator
+Set $ProductId$       = "ica-spybot"
+Set $Setupfile$       = "spybotsd-2.6.46.exe"
+; the path where we find the product after the installation on a 64 bit OS
+Set $InstallDir$      = "%ProgramFiles32Dir%\Spybot - Search & Destroy 2"
+; the path where we find the product after the installation on a 32 bit OS
+Set $InstallDir2$      = "%ProgramFilesDir%\Spybot - Search & Destroy 2"
+; $SetupDotIni$ is the name of the loadinf file on a 64 bit OS
+Set $SetupDotIni$ = "setup.ini"
+; $SetupDotIni2$ is the name of the loadinf file on a 32 bit OS
+Set $SetupDotIni2$ = "setup2.ini"
+; the name of the desktop shortcut after the installation
+Set $ProductName2$      = "Spybot-S&D Start Center"
+Set $LicenseRequired$ = "false"
+Set $LicensePool$     = "p_" + $ProductId$
+Set $MsiId$           = ""
+Set $MinimumSpace$    = "296 MB"
+; ----------------------------------------------------------------
+; ----------------------------------------------------------------
+
+
+Set $WinTypeExt$ = "x64"
+if ($WinSysType$ = "x86 System")
+    Set $WinTypeExt$ = "x86"
+    Set $InstallDir$ = $InstallDir2$
+    Set $SetupDotIni$ = $SetupDotIni2$
+endif   
+
+if CompareDotSeparatedNumbers($WinVer$,"<","6.1")
+   LogError $ProductId$ + " requires Windows version 6.1 or above. This system is reporting version " + $WinVer$ + " ("+ $WinSysType$ + ")"
+   Message "Error: Can not install " + $ProductId$ + " on Windows " + $WinVer$ + " systems... "
+   isFatalError "Wrong product"
+   ; Stop process and set installation status to failed
+endif
+
+
+if not(HasMinimumSpace ("%SystemDrive%", $MinimumSpace$))
+   LogError "Not enough space on %SystemDrive%, " + $MinimumSpace$ + " on drive %SystemDrive% needed for " + $ProductId$
+   isFatalError "No Space"
+   ; Stop process and set installation status to failed
+else
+   comment "Show product picture"
+   ShowBitmap "%ScriptPath%\" + $ProductId$ + ".png" $ProductId$
+
+   if FileExists("%ScriptPath%\delsub.opsiscript")
+      comment "Start uninstall sub section"
+      Sub "%ScriptPath%\delsub.opsiscript"
+   endif
+   
+   Message "Installing " + $ProductId$ + " ..." + $WinTypeExt$
+   
+   if $LicenseRequired$ = "true"
+      comment "Licensing required, reserve license and get license key"
+      Sub_get_licensekey
+   endif
+
+   
+   comment "Start setup program"
+   ChangeDirectory "%SCRIPTPATH%"
+   ;----------------------------------------------
+   Winbatch_install_inno
+   ;----------------------------------------------
+   Sub_check_exitcode
+   ; delete desktop shortcut
+   LinkFolder_uninstall
+   ;
+   ; Now, let opsi reboot to complete the install
+   ExitWindows /Reboot
+endif
+
+
+; ----------------------------------------------------------------
+; install section
+; ----------------------------------------------------------------
+
+[Winbatch_install_inno]
+; http://unattended.sourceforge.net/InnoSetup_Switches_ExitCodes.html
+; You may create setup answer file by: setup.exe /SAVEINF="filename"
+; You may use an answer file by the parameter /LOADINF="filename"
+;"%ScriptPath%\spybotsd-2.6.46.exe" /sp- /silent /norestart /nocancel /SUPPRESSMSGBOXES
+;"%ScriptPath%\spybotsd-2.6.46.exe" /sp- /verysilent /norestart /nocancel /suppressmsgboxes  /saveinf="c:\opsi.org\log\setup2.ini" /log="c:\opsi.org\log\ica-spybot.log"
+;"%ScriptPath%\spybotsd-2.6.46.exe" /sp- /verysilent /norestart /nocancel /suppressmsgboxes  /loadinf="%ScriptPath%\setup2.ini" /log="c:\opsi.org\log\ica-spybot.log"
+;"%ScriptPath%\spybotsd-2.6.46.exe" /sp- /verysilent /norestart /nocancel /suppressmsgboxes /log="c:\opsi.org\log\ica-spybot.log"
+; Note: need to add arguments to autoIT script : '/sp- /verysilent /norestart /nocancel /suppressmsgboxes  /loadinf=setup2.ini /log=c:\opsi.org\log\ica-spybot.log'
+"%ScriptPath%\spybot-install.exe" "%ScriptPath%\spybotsd-2.6.46.exe /sp- /verysilent /norestart /nocancel /suppressmsgboxes  /loadinf=$SetupDotIni$ /log=c:\opsi.org\log\spybot-install-log.txt" 
+
+; ----------------------------------------------------------------
+
+
+[LinkFolder_uninstall]
+;
+; delete shortcut from AllUsers desktop:
+;
+ set_basefolder common_desktopdirectory
+ set_subfolder ""
+ delete_element $ProductName2$
+
+[Sub_get_licensekey]
+if opsiLicenseManagementEnabled
+   comment "License management is enabled and will be used"
+
+   comment "Trying to get a license key"
+   Set $LicenseKey$ = demandLicenseKey ($LicensePool$)
+   ; If there is an assignment of exactly one licensepool to the product the following call is possible:
+   ; Set $LicenseKey$ = demandLicenseKey ("", $ProductId$)
+   ;
+   ; If there is an assignment of a license pool to a windows software id, it is possible to use:
+   ; DefVar $WindowsSoftwareId$
+   ; $WindowsSoftwareId$ = "..."
+   ; Set $LicenseKey$ = demandLicenseKey ("", "", $WindowsSoftwareId$)
+
+   DefVar $ServiceErrorClass$
+   set $ServiceErrorClass$ = getLastServiceErrorClass
+   comment "Error class: " + $ServiceErrorClass$
+   
+   if $ServiceErrorClass$ = "None"
+      comment "Everything fine, we got the license key '" + $LicenseKey$ + "'"
+   else
+      if $ServiceErrorClass$ = "LicenseConfigurationError"
+         LogError "Fatal: license configuration must be corrected"
+         LogError getLastServiceErrorMessage
+         isFatalError
+      else 
+         if $ServiceErrorClass$ = "LicenseMissingError"
+            LogError "Fatal: required license is not supplied"
+            isFatalError
+         endif
+      endif
+   endif
+else
+   LogError "Fatal: license required, but license management not enabled"
+   isFatalError
+endif
+
+; ----------------------------------------------------------------
+; ----------------------------------------------------------------
+
